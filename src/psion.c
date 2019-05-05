@@ -8,22 +8,21 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "http_helper.h"
+#include "error_helper.h"
 #include "picohttpparser.h"
 #include "trie.h"
 
-#define on_error(...) { fprintf(stderr, __VA_ARGS__); fflush(stderr); exit(1); }
 
 int visitor_print(const char *key, void *data, void *arg)
 {
-    ssize_t written;
-
     (void) data;
 
     // printf("%s\n", key);
     // written = write(*(int *) arg, key, strlen(key)); 
-    arg = strcat((char *) arg, key); 
+    strcat((char *) arg, key); 
+    strcat((char *) arg, "\n");
 
-    (void) written;
     return 0;
 }
 
@@ -35,7 +34,7 @@ int main()
     struct sockaddr_in server, client;
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd < 0) on_error("Could not create socket\n");
+    if (server_fd < 0) on_error_exit("Could not create socket\n");
 
     server.sin_family = AF_INET;
     server.sin_port = htons(port);
@@ -45,13 +44,13 @@ int main()
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt_val, sizeof opt_val);
 
     err = bind(server_fd, (struct sockaddr *) &server, sizeof(server));
-    if (err < 0) on_error("Could not bind socket\n");
+    if (err < 0) on_error_exit("Could not bind socket\n");
 
     err = listen(server_fd, 128);
-    if (err < 0) on_error("Could not listen on socket\n");
+    if (err < 0) on_error_exit("Could not listen on socket\n");
 
     printf("Server is listening on %d\n", port);
-    
+
     struct trie *t = trie_create();
 
     (void) trie_insert(t, (const char *) "key1", (void *) "data1");
@@ -70,17 +69,21 @@ int main()
     size_t buflen = 0, prevbuflen = 0, method_len, path_len, num_headers;
     ssize_t rret;
 
-    char resp[4096] = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 1024\n\nISOK>";
+    char resp[4096];
+    memset(resp, 0, sizeof(resp));
+
     char fail_resp[256] = "HTTP/1.1 400 Bad Request\nContent-Type: text/plain\nContent-Length: 4\n\nUBAD\0";
 
     char _path[1024];
+    
+    char *http_resp = NULL;
 
     while (1)
     {
         socklen_t client_len = sizeof(client);
         client_fd = accept(server_fd, (struct sockaddr *) &client, &client_len);
 
-        if (client_fd < 0) on_error("Could not establish new connection\n");
+        if (client_fd < 0) on_error_exit("Could not establish new connection\n");
 
         while (1)
         {
@@ -88,6 +91,7 @@ int main()
             while ((rret = read(client_fd, buf + buflen, sizeof(buf) - buflen)) == -1 && errno == EINTR) {}
             if (rret <= 0)
                 return -127;
+
             prevbuflen = buflen;
             buflen += rret;
             /* parse the request */
@@ -116,10 +120,13 @@ int main()
         {
             printf("Retrieve operation\n");
             trie_visit(t, "key", visitor_print, resp);
+            http_resp = build_http_resp(200, "Content-Type: text/plain\nAccept: text/plain", resp);
         }
         else if(strncmp(_path, "/insert", strlen("/insert")) == 0)
         {
             printf("Insert operation\n");
+            err = write(client_fd, fail_resp, strlen(fail_resp));
+            continue;
         }
         else
         {
@@ -128,10 +135,9 @@ int main()
             continue;
         }
 
-        err = write(client_fd, resp, strlen(resp));
-        if (err < 0) on_error("Client write failed\n");
+        err = write(client_fd, http_resp, strlen(http_resp));
+        if (err < 0) on_error_exit("Client write failed\n");
     }
 
     return 0;
-
 }
