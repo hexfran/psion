@@ -1,0 +1,34 @@
+#include <stdio.h>
+#include "core.h"
+
+int main(int argc, char *argv[])
+{
+    (void) argc;
+    (void) argv;
+
+    size_t count;
+    size_t capacity;
+
+    p_record val;
+
+    val.key = sdsnew("key1");
+    val.content = sdsnew("content1");
+
+    p_record val2;
+
+    val2.key = sdsnew("key2");
+    val2.content = sdsnew("content2");
+
+    p_record *records = init_empty_record_array(&count, &capacity);
+
+    print_records(records, count);
+
+    insert_record(records, &count, capacity, &val); 
+    insert_record(records, &count, capacity, &val2); 
+
+    print_records(records, count);
+
+    free_record_array(records, count);
+
+    return 0;
+}
