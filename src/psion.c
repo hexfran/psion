@@ -9,10 +9,13 @@
 #include <assert.h>
 #include <signal.h>
 
+#include "config_helper.h"
 #include "http_helper.h"
 #include "error_helper.h"
 #include "picohttpparser.h"
 #include "trie.h"
+
+#define DEFAULT_PORT 2091
 
 void handle_sigint();
 int visitor_print(const char *key, void *data, void *arg);
@@ -23,7 +26,16 @@ int main()
 {
     signal(SIGINT, handle_sigint);
 
-    int port = 2091;
+    int port = DEFAULT_PORT;
+    char key[] = "port";
+    char value[1024];
+
+    get_config(key, value);
+
+    if(strlen(value) > 0)
+    {
+        port = atoi(value);
+    }
 
     int server_fd, client_fd, err;
     struct sockaddr_in server, client;
