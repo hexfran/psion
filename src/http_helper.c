@@ -74,5 +74,8 @@ ssize_t find_body_index(char *str, char *body)
         return ((strstr(str, delimiter) - str) + 4);
     }
 
+    memset(body, 0, sizeof(*body));
+    body = NULL;
+
     return -1;
 }
