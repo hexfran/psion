@@ -60,20 +60,6 @@ int main()
 
     struct trie *t = trie_create();
 
-    (void) trie_insert(t, (const char *) "key1", (void *) "data1");
-    (void) trie_insert(t, (const char *) "key2", (void *) "data2");
-    (void) trie_insert(t, (const char *) "key3", (void *) "data3");
-    (void) trie_insert(t, (const char *) "key4", (void *) "data4");
-    (void) trie_insert(t, (const char *) "key5", (void *) "data5");
-    (void) trie_insert(t, (const char *) "key6", (void *) "data6");
-    (void) trie_insert(t, (const char *) "key7", (void *) "data7");
-    (void) trie_insert(t, (const char *) "key8", (void *) "data8");
-    (void) trie_insert(t, (const char *) "key9", (void *) "data9");
-    (void) trie_insert(t, (const char *) "key10", (void *) "data10");
-    (void) trie_insert(t, (const char *) "key11", (void *) "data11");
-    (void) trie_insert(t, (const char *) "key20", (void *) "data20");
-    (void) trie_insert(t, (const char *) "key21", (void *) "data21");
-
     char buf[4096], *method, *path;
     int pret, minor_version;
     struct phr_header headers[100];
@@ -125,17 +111,31 @@ int main()
 
         sprintf(_path, "%.*s", (int)path_len, path);
 
-        // printf("> %s\n", _path);
-
         if(strncmp(_path, "/retrieve", strlen("/retrieve")) == 0)
         {
+            printf("> %s\n", (_path + strlen("/retrieve/")));
+
             trie_visit(t, (_path + strlen("/retrieve/")), visitor_print, resp);
             http_resp = build_http_resp(200, "Content-Type: text/plain\nAccept: text/plain", resp);
         }
         else if(strncmp(_path, "/insert", strlen("/insert")) == 0)
         {
-            err = write(client_fd, fail_resp, strlen(fail_resp));
-            continue;
+            ssize_t body_index = find_body_index(buf); 
+            char body[1024];
+
+            memset(body, 0, sizeof(body));
+
+            if(body_index > 0)
+            {
+                strncpy(body, (buf + body_index), sizeof(body));
+                (void) trie_insert(t, (const char *) body, (void *) "data");
+                http_resp = build_http_resp(200, "Content-Type: text/plain\nAccept: text/plain", "Value inserted");
+            }
+            else
+            {
+                err = write(client_fd, fail_resp, strlen(fail_resp));
+                continue;
+            }
         }
         else
         {
