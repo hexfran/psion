@@ -27,6 +27,8 @@ void get_config(char *key, char *value)
         }
     }
 
+    memset(value, 0, sizeof(*value));
+
     while(fgets(buf, sizeof(buf), fp) != NULL)
     {
         memset(tmp, 0, sizeof(tmp));
@@ -49,10 +51,12 @@ void get_config(char *key, char *value)
             }
             else
             {
-                value = NULL;
+                value = "\0";
             } 
         }
     }
+
+    fclose(fp);
 }
 
 ssize_t char_pos(char *str, char ch)
