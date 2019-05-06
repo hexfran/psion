@@ -70,7 +70,7 @@ ssize_t find_body_index(char *str, char *body)
 
     if(strstr(str, delimiter) != NULL)
     {
-        strcpy(body, (strstr(str,delimiter) + 4));
+        strcpy(body, (strstr(str, delimiter) + 4));
         return ((strstr(str, delimiter) - str) + 4);
     }
 
