@@ -1,0 +1,6 @@
+# comments start with # and are ignored until end of the line
+# currently supported values:
+# port=8100 (the port that the application will bind to)
+
+port=2901
+log=myfile.log
