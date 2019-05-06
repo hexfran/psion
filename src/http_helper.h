@@ -8,6 +8,6 @@
 // NOTE: headers is all the headers in a string like the following:
 // Accept: text/plain;\nContent-Type: text/plain
 char *build_http_resp(int statcode, char *headers, char *body);
-ssize_t find_body_index(char *str);
+ssize_t find_body_index(char *str, char *body);
 
 #endif

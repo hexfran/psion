@@ -64,13 +64,14 @@ char *build_http_resp(int statcode, char *headers, char *body)
 }
 
 
-ssize_t find_body_index(char *str)
+ssize_t find_body_index(char *str, char *body)
 {
     char delimiter[4] = "\r\n\r\n";
 
     if(strstr(str, delimiter) != NULL)
     {
-        return (strstr(str, delimiter) - str) + 4; 
+        strcpy(body, (strstr(str,delimiter) + 4));
+        return ((strstr(str, delimiter) - str) + 4);
     }
 
     return -1;
