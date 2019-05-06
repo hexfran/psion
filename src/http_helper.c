@@ -56,7 +56,7 @@ char *build_http_resp(int statcode, char *headers, char *body)
     resp = strcat(resp, body);
     resp = strcat(resp, "\0");
 
-    printf("<>\n%s\n<>\n", resp);
+    // printf("<>\n%s\n<>\n", resp);
 
     return resp;
 }
