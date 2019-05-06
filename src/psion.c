@@ -73,6 +73,8 @@ int main()
     char _path[1024];
     char *http_resp = NULL;
 
+    memset(buf, 0, sizeof(buf));
+
     while (!do_cleanup)
     {
         socklen_t client_len = sizeof(client);
@@ -113,27 +115,49 @@ int main()
 
         if(strncmp(_path, "/retrieve", strlen("/retrieve")) == 0)
         {
-            printf("> %s\n", (_path + strlen("/retrieve/")));
-
             trie_visit(t, (_path + strlen("/retrieve/")), visitor_print, resp);
             http_resp = build_http_resp(200, "Content-Type: text/plain\nAccept: text/plain", resp);
+
+            err = write(client_fd, http_resp, strlen(http_resp));
+
+            memset(resp, 0, sizeof(*resp));
+            memset(http_resp, 0, sizeof(*http_resp));
+            free(http_resp);
+            http_resp = NULL;
+
+            if (err < 0) on_error_exit("Client write failed\n");
+            continue;
         }
         else if(strncmp(_path, "/insert", strlen("/insert")) == 0)
         {
-            ssize_t body_index = find_body_index(buf); 
             char body[1024];
 
-            memset(body, 0, sizeof(body));
+            (void) find_body_index(buf, body);
 
-            if(body_index > 0)
+            if(body != NULL && strlen(body) > 0)
             {
-                strncpy(body, (buf + body_index), sizeof(body));
-                (void) trie_insert(t, (const char *) body, (void *) "data");
+                (void) trie_insert(t, body, (void *) "data");
                 http_resp = build_http_resp(200, "Content-Type: text/plain\nAccept: text/plain", "Value inserted");
+
+                err = write(client_fd, http_resp, strlen(http_resp));
+
+                memset(resp, 0, sizeof(*resp));
+                memset(http_resp, 0, sizeof(*http_resp));
+                free(http_resp);
+                http_resp = NULL;
+
+                if (err < 0) on_error_exit("Client write failed\n");
+                continue;
             }
             else
             {
                 err = write(client_fd, fail_resp, strlen(fail_resp));
+
+                memset(resp, 0, sizeof(*resp));
+                memset(http_resp, 0, sizeof(*http_resp));
+
+                if (err < 0) on_error_exit("Client write failed\n");
+
                 continue;
             }
         }
@@ -144,17 +168,10 @@ int main()
             continue;
         }
 
-        err = write(client_fd, http_resp, strlen(http_resp));
-        if (err < 0) on_error_exit("Client write failed\n");
-
-        memset(resp, 0, sizeof(*resp));
-        memset(http_resp, 0, sizeof(*http_resp));
     }
 
     trie_free(t);
-    free(http_resp);
-    // free(method);
-    // free(path);
+    if(http_resp != NULL) free(http_resp);
 
     printf("Cleaned, exiting\n");
 
