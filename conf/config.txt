@@ -1,6 +1,8 @@
-# comments start with # and are ignored until end of the line
-# currently supported values:
+# Comments start with # and are ignored until end of the line
+# Currently supported values:
 # port=8100 (the port that the application will bind to)
 
-port=2901
+# Make sure there is no space before the property name at the start of the line
+
+port=2091
 log=myfile.log
