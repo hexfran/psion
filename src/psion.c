@@ -132,7 +132,11 @@ int main()
         {
             char body[1024];
 
+            memset(body, 0, sizeof(body));
+
             (void) find_body_index(buf, body);
+
+            memset(buf, 0, sizeof(buf));
 
             if(body != NULL && strlen(body) > 0)
             {
@@ -157,7 +161,6 @@ int main()
                 memset(http_resp, 0, sizeof(*http_resp));
 
                 if (err < 0) on_error_exit("Client write failed\n");
-
                 continue;
             }
         }
@@ -167,7 +170,6 @@ int main()
             err = write(client_fd, fail_resp, strlen(fail_resp));
             continue;
         }
-
     }
 
     trie_free(t);
