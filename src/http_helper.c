@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/types.h>
+
 #include "error_helper.h"
 #include "http_helper.h"
 
@@ -59,4 +61,17 @@ char *build_http_resp(int statcode, char *headers, char *body)
     // printf("<>\n%s\n<>\n", resp);
 
     return resp;
+}
+
+
+ssize_t find_body_index(char *str)
+{
+    char delimiter[4] = "\r\n\r\n";
+
+    if(strstr(str, delimiter) != NULL)
+    {
+        return (strstr(str, delimiter) - str) + 4; 
+    }
+
+    return -1;
 }
