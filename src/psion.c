@@ -113,7 +113,7 @@ int main()
 
         sprintf(_path, "%.*s", (int)path_len, path);
 
-        printf("> %s\n", _path);
+        // printf("> %s\n", _path);
 
         if(strncmp(_path, "/retrieve", strlen("/retrieve")) == 0)
         {
@@ -141,8 +141,8 @@ int main()
 
     trie_free(t);
     free(http_resp);
-    free(method);
-    free(path);
+    // free(method);
+    // free(path);
 
     printf("Cleaned, exiting\n");
 
