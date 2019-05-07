@@ -158,7 +158,6 @@ int main()
                 err = write(client_fd, fail_resp, strlen(fail_resp));
 
                 memset(resp, 0, sizeof(*resp));
-                memset(http_resp, 0, sizeof(*http_resp));
 
                 if (err < 0) on_error_exit("Client write failed\n");
                 continue;
