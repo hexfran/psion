@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <signal.h>
 
+#include "json_helper.h"
 #include "config_helper.h"
 #include "http_helper.h"
 #include "error_helper.h"
@@ -16,6 +17,7 @@
 #include "trie.h"
 
 #define DEFAULT_PORT 2091
+#define DEFAULT_SEPARATOR ">|"
 
 void handle_sigint();
 int visitor_print(const char *key, void *data, void *arg);
@@ -115,15 +117,24 @@ int main()
 
         if(strncmp(_path, "/retrieve", strlen("/retrieve")) == 0)
         {
+            char *res_json = NULL;
             trie_visit(t, (_path + strlen("/retrieve/")), visitor_print, resp);
-            http_resp = build_http_resp(200, "Content-Type: text/plain\nAccept: text/plain", resp);
+            
+            res_json = serialize_delim_str_to_json(resp, DEFAULT_SEPARATOR); 
+
+            http_resp = build_http_resp(200, "Content-Type: text/plain\nAccept: text/plain", res_json);
 
             err = write(client_fd, http_resp, strlen(http_resp));
 
             memset(resp, 0, sizeof(*resp));
             memset(http_resp, 0, sizeof(*http_resp));
+            memset(res_json, 0, sizeof(*res_json));
+
             free(http_resp);
+            free(res_json);
+            
             http_resp = NULL;
+            res_json = NULL;
 
             if (err < 0) on_error_exit("Client write failed\n");
             continue;
@@ -131,16 +142,31 @@ int main()
         else if(strncmp(_path, "/insert", strlen("/insert")) == 0)
         {
             char body[1024];
+            char deserialized[1024];
 
             memset(body, 0, sizeof(body));
+            memset(deserialized, 0, sizeof(deserialized));
 
             (void) find_body_index(buf, body);
 
             memset(buf, 0, sizeof(buf));
 
-            if(body != NULL && strlen(body) > 0)
+            get_value_from_json(body, deserialized, sizeof(deserialized)); 
+
+            if(deserialized == NULL || strlen(deserialized) < 1)
             {
-                (void) trie_insert(t, body, (void *) "data");
+                err = write(client_fd, fail_resp, strlen(fail_resp));
+
+                memset(resp, 0, sizeof(*resp));
+                memset(http_resp, 0, sizeof(*http_resp));
+
+                if (err < 0) on_error_exit("Client write failed\n");
+                continue;
+            }
+
+            if(deserialized != NULL && strlen(deserialized) >= 1)
+            {
+                (void) trie_insert(t, deserialized, (void *) "data");
                 http_resp = build_http_resp(200, "Content-Type: text/plain\nAccept: text/plain", "Value inserted");
 
                 err = write(client_fd, http_resp, strlen(http_resp));
@@ -192,7 +218,7 @@ int visitor_print(const char *key, void *data, void *arg)
     (void) data;
 
     strcat((char *) arg, key); 
-    strcat((char *) arg, "\n");
+    strcat((char *) arg, DEFAULT_SEPARATOR);
 
     return 0;
 }
