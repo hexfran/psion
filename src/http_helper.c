@@ -24,13 +24,13 @@ char *build_http_resp(int statcode, char *headers, char *body)
     // add extra space for the Content-Length header
     char *resp = malloc(strlen(intro) + 3 + sizeof(content_len) + strlen(headers) + sizeof(status) + strlen(body) + 1);
     
-    memset(status, 0, sizeof(status));
-    memset(resp, 0, sizeof(*resp));
-
     if(resp == NULL)
     {
         on_error_exit("Error allocating memory for http response, aborting");
     }
+
+    memset(status, 0, sizeof(status));
+    memset(resp, 0, sizeof(*resp));
 
     switch(statcode)
     {
@@ -75,7 +75,6 @@ ssize_t find_body_index(char *str, char *body)
     }
 
     memset(body, 0, sizeof(*body));
-    body = NULL;
 
     return -1;
 }
