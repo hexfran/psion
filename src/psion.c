@@ -233,9 +233,6 @@ main(int argc, char **argv)
         ret = 1;
     }
 
-    /* The /dump URI will dump all requests to stdout and say 200 ok. */
-    evhttp_set_cb(http, "/dump", dump_request_cb, NULL);
-
     /*
      * Set the endpoints
      */ 
