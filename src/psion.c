@@ -63,6 +63,9 @@ static void fronting_cb(struct evhttp_request *req, void *arg)
         char resp[4096];
 
         char *res_json = NULL;
+
+        memset(resp, 0, sizeof(resp));
+
         trie_visit((struct trie *) arg, (uri + strlen("/retrieve/")), visitor_print, resp);
 
         res_json = serialize_delim_str_to_json(resp, DEFAULT_SEPARATOR); 
@@ -95,21 +98,30 @@ static void insert_cb(struct evhttp_request *req, void *arg)
         return;
     }
 
+    char *body = NULL;
+    char deserialized[1024] = {0};
+
     struct evbuffer *buf;
     struct evbuffer *resp = evbuffer_new();
 
     evhttp_add_header(req->output_headers, "Content-Type", "application/json");  
 
-    char *body;
-    char deserialized[1024];
-
-    memset(deserialized, 0, sizeof(deserialized));
-
     buf = evhttp_request_get_input_buffer(req);
 
     size_t bytes = evbuffer_get_length(buf);
 
-    body = malloc(bytes);
+    /*
+     * NOTE IMPORTANT: Using malloc and later memset was giving problems with
+     * Valgrind, complaining about "body" not being initialized correctly,
+     * specifically reporting: "Conditional move or jump depdens on
+     * uninitialized data"
+     *
+     * Not sure why this is the case, never gave problems before, but using
+     * calloc solved the issue and that is good for now.
+     * To be investigated later, definitely
+     */
+    // extra 1 char for '\0'
+    body = calloc(1, bytes + 1);
 
     if(body == NULL)
     {
@@ -120,14 +132,15 @@ static void insert_cb(struct evhttp_request *req, void *arg)
         return;
     }
 
-    while (evbuffer_get_length(buf)) {
-        int n;
-        char cbuf[128];
-        n = evbuffer_remove(buf, cbuf, sizeof(cbuf));
-        if (n > 0)
-            body = strcat(body, cbuf);
-    }
+    if(evbuffer_remove(buf, body, bytes) == -1)
+    {
+        evbuffer_free(resp);
 
+        evhttp_send_reply(req, 500, "Internal Server Error", NULL);
+
+        return;
+    }
+    
     get_value_from_json(body, deserialized, sizeof(deserialized)); 
 
     if(deserialized == NULL || strlen(deserialized) < 1)
@@ -202,6 +215,8 @@ main(int argc, char **argv)
     struct options o = parse_opts(argc, argv);
     int ret = 0;
 
+    struct trie *t = NULL;
+
     if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
         ret = 1;
         goto err;
@@ -210,7 +225,7 @@ main(int argc, char **argv)
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
 
-    struct trie *t = trie_create();
+    t = trie_create();
 
     /** Read env like in regress" */
     if (o.verbose || getenv("EVENT_DEBUG_LOGGING_ALL"))
@@ -307,6 +322,8 @@ err:
         event_free(term);
     if (base)
         event_base_free(base);
+    if(t)
+        trie_free(t);
 
     return ret;
 }
