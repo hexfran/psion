@@ -81,8 +81,6 @@ int visitor_print(const char *key, void *data, void *arg)
     strcat(bf->buf, key); 
     strcat(bf->buf, DEFAULT_SEPARATOR);
 
-    bf = NULL;
-
     return 0;
 }
 
@@ -109,14 +107,16 @@ static void fronting_cb(struct evhttp_request *req, void *arg)
 
         evbuffer_add(buf, res_json, strlen(res_json));
 
-        evhttp_send_reply(req, 200, "OK", buf);
-
-        memset(resp, 0, sizeof(*resp));
         memset(res_json, 0, sizeof(*res_json));
 
+        free(resp->buf);
         free(resp);
         free(res_json);
+
         res_json = NULL;
+        resp = NULL;
+
+        evhttp_send_reply(req, 200, "OK", buf);
 
         evbuffer_free(buf);
     }
@@ -344,6 +344,7 @@ main(int argc, char **argv)
     }
 
     term = evsignal_new(base, SIGINT, do_term, base);
+
     if (!term)
         goto err;
     if (event_add(term, NULL))
