@@ -42,12 +42,46 @@ struct options
     int verbose;
 };
 
+struct sized_buf
+{
+    char *buf;
+    size_t occupied;
+    size_t allocated;
+};
+
 int visitor_print(const char *key, void *data, void *arg)
 {
     (void) data;
+ 
+    struct sized_buf *bf = ((struct sized_buf *) arg);
 
-    strcat((char *) arg, key); 
-    strcat((char *) arg, DEFAULT_SEPARATOR);
+    size_t key_size = strlen(key) + 1;
+    size_t occupied = bf->occupied;
+    size_t allocated = bf->allocated;
+
+    if((key_size + occupied + strlen(DEFAULT_SEPARATOR)) >= allocated)
+    {
+        // we don't fit, reallocate and update the allocated size
+        bf->buf = realloc(bf->buf, allocated * 2);  
+       
+        if(bf->buf == NULL)
+        {
+            printf("Error reallocating buffer\n");
+            free(bf);
+
+            return -129;
+        }
+
+        bf->allocated *= 2;
+    }
+
+    bf->occupied += key_size;
+    bf->occupied += strlen(DEFAULT_SEPARATOR);
+
+    strcat(bf->buf, key); 
+    strcat(bf->buf, DEFAULT_SEPARATOR);
+
+    bf = NULL;
 
     return 0;
 }
@@ -60,15 +94,18 @@ static void fronting_cb(struct evhttp_request *req, void *arg)
     {
         struct evbuffer *buf = evbuffer_new();
 
-        char resp[4096];
+        struct sized_buf *resp = malloc(sizeof(struct sized_buf));
+
+        // start with a basic dimension of 4K, expanded later if necessary
+        resp->buf = calloc(1, 4096 * sizeof(char));
+        resp->occupied = 0;
+        resp->allocated = 4096;
 
         char *res_json = NULL;
 
-        memset(resp, 0, sizeof(resp));
-
         trie_visit((struct trie *) arg, (uri + strlen("/retrieve/")), visitor_print, resp);
 
-        res_json = serialize_delim_str_to_json(resp, DEFAULT_SEPARATOR); 
+        res_json = serialize_delim_str_to_json(resp->buf, DEFAULT_SEPARATOR); 
 
         evbuffer_add(buf, res_json, strlen(res_json));
 
@@ -76,7 +113,8 @@ static void fronting_cb(struct evhttp_request *req, void *arg)
 
         memset(resp, 0, sizeof(*resp));
         memset(res_json, 0, sizeof(*res_json));
-            
+
+        free(resp);
         free(res_json);
         res_json = NULL;
 
@@ -324,6 +362,7 @@ err:
         event_base_free(base);
     if(t)
         trie_free(t);
+    
 
     return ret;
 }
