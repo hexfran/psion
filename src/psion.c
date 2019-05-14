@@ -128,7 +128,7 @@ static void fronting_cb(struct evhttp_request *req, void *arg)
 
 static void insert_cb(struct evhttp_request *req, void *arg)
 {
-    char success_res[] = "{\"message\": \"Value inserted successfully\"}"; 
+    char success_res[] = "{\"msg\": \"Ok\"}"; 
 
     if(evhttp_request_get_command(req) != EVHTTP_REQ_POST)
     {
@@ -164,7 +164,6 @@ static void insert_cb(struct evhttp_request *req, void *arg)
     if(body == NULL)
     {
         evbuffer_free(resp);
-
         evhttp_send_reply(req, 500, "Internal Server Error", NULL);
 
         return;
@@ -173,7 +172,6 @@ static void insert_cb(struct evhttp_request *req, void *arg)
     if(evbuffer_remove(buf, body, bytes) == -1)
     {
         evbuffer_free(resp);
-
         evhttp_send_reply(req, 500, "Internal Server Error", NULL);
 
         return;
