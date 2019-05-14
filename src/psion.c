@@ -183,7 +183,7 @@ static void insert_cb(struct evhttp_request *req, void *arg)
     {
         evbuffer_free(resp);
 
-        evhttp_send_reply(req, 500, "Internal Server Error", NULL);
+        evhttp_send_reply(req, 400, "Bad Request", NULL);
 
         free(body);
 
