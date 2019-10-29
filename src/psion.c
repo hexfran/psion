@@ -1,6 +1,4 @@
 /* Compatibility for possible missing IPv6 declarations */
-#include "../libs/libevent/util-internal.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +12,8 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <signal.h>
+
+#include <getopt.h>
 
 #include <event2/event.h>
 #include <event2/http.h>
